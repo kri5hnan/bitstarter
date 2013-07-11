@@ -27,6 +27,7 @@ var cheerio = require('cheerio');
 var http = require('http');
 var rest = require('restler');
 var sys = require('util');
+var outfile = "temp.html";
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
 var URL_DEFAULT = "http://protected-stream-5189.herokuapp.com";
@@ -34,7 +35,7 @@ var URL_DEFAULT = "http://protected-stream-5189.herokuapp.com";
 var assertFileExists = function(infile) {
     var instr = infile.toString();
     if(!fs.existsSync(instr)) {
-	console.log("%s does not exist. Exiting.", instr);
+console.log("%s does not exist. Exiting.", instr);
 	process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
     }
     return instr;
@@ -51,19 +52,16 @@ var cheerioHtmlFile = function(htmlfile) {
     return cheerio.load(fs.readFileSync(htmlfile));
 };
 
-var cheerioHtmlURL = function(url) {
-     var urldata;
-     rest.get(url).on('complete',function(data) {
-      if (data instanceof Error) {
-       sys.puts('Error: '+ data.message);
-       this.retry(5000);
-      }else{
-       urldata = this.data;
-      }
-     });
-
-return cheerio.load(urldata);
-
+var checkURL = function(htmlfile,checksfile) {
+var restresponse =  function(data,response) {
+     if (data instanceof Error) {
+      console.log('Error: ' + data.message);
+     }else{
+       fs.writeFileSync(htmlfile,data);
+//       console.log(data);
+     }
+};
+return restresponse;
 };
 
 var loadChecks = function(checksfile) {
@@ -82,15 +80,10 @@ var checkHtmlFile = function(htmlfile, checksfile) {
 };
 
 var checkHtmlURL = function(url, checksfile) {
-    $ = cheerioHtmlURL(url);
-//    var out = $.html();
-    var checks = loadChecks(checksfile).sort();
-    var out = {};
-    for(var ii in checks) {
-	var present = $(checks[ii]).length > 0;
-	out[checks[ii]] = present;
-    }
-    return out;
+    var restresponse = checkURL(outfile,checksfile);
+    rest.get(url).on('complete', restresponse);
+    var out = checkHtmlFile(outfile,checksfile);
+    return out ;
 };
 
 
